@@ -1,0 +1,59 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int       @id @default(autoincrement())
+  username      String    @unique
+  passwordHash  String    @map("password_hash")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  startingNumbers StartingNumber[]
+  operations    Operation[]
+
+  @@map("users")
+}
+
+model StartingNumber {
+  id        Int        @id @default(autoincrement())
+  userId    Int        @map("user_id")
+  number    Decimal    @db.Decimal
+  createdAt DateTime   @default(now()) @map("created_at")
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  operations Operation[]
+
+  @@map("starting_numbers")
+}
+
+model Operation {
+  id                Int            @id @default(autoincrement())
+  userId            Int            @map("user_id")
+  parentId          Int?           @map("parent_id")
+  parentOperationId Int?           @map("parent_operation_id")
+  operationType     OperationType  @map("operation_type")
+  rightOperand      Decimal        @map("right_operand") @db.Decimal
+  result            Decimal        @db.Decimal
+  createdAt         DateTime       @default(now()) @map("created_at")
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentStarting    StartingNumber? @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  parentOperation   Operation?     @relation("OperationToOperation", fields: [parentOperationId], references: [id], onDelete: Cascade)
+  childOperations   Operation[]    @relation("OperationToOperation")
+
+  @@index([parentId])
+  @@index([parentOperationId])
+  @@map("operations")
+}
+
+enum OperationType {
+  add
+  subtract
+  multiply
+  divide
+}
