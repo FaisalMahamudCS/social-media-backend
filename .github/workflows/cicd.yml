@@ -1,0 +1,107 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+    strategy:
+      matrix:
+        node-version: [20.x]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      # - name: Run linting
+      #   run: npm run lint
+
+      # - name: Run unit tests
+      #   run: npm run test
+
+      # # - name: Run e2e tests
+      # #   run: npm run test:e2e
+
+      # - name: Generate test coverage
+      #   run: npm run test:coverage
+
+      # - name: Upload coverage to Codecov
+      #   uses: codecov/codecov-action@v3
+      #   with:
+      #     file: ./coverage/lcov.info
+      #     flags: unittests
+      #     name: codecov-umbrella
+      #     fail_ci_if_error: false
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Build application
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-files
+          path: dist/
+
+  docker-build:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.backend
+          push: false
+          tags: nest-backend:test
+
+  deploy-render:
+    needs: docker-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render Deploy
+        run: |
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+
