@@ -27,6 +27,7 @@ export interface OperationNode {
   id: number;
   type: 'starting' | 'operation';
   user_id: number;
+  username?: string;
   value: number;
   operation_type?: 'add' | 'subtract' | 'multiply' | 'divide';
   right_operand?: number;

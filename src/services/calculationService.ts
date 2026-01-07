@@ -118,6 +118,7 @@ export class CalculationService {
         id: starting.id,
         type: 'starting',
         user_id: starting.userId,
+        username: starting.user?.username ?? undefined,
         value: Number(starting.number),
         created_at: starting.createdAt.toISOString(),
         children: [],
@@ -129,6 +130,13 @@ export class CalculationService {
 
         const operations = await prisma.operation.findMany({
           where: parentType === 'starting' ? { parentId } : { parentOperationId: parentId },
+          include: {
+            user: {
+              select: {
+                username: true,
+              },
+            },
+          },
           orderBy: {
             createdAt: 'asc',
           },
@@ -139,6 +147,7 @@ export class CalculationService {
             id: op.id,
             type: 'operation',
             user_id: op.userId,
+            username: (op as any).user?.username ?? undefined,
             value: Number(op.result),
             operation_type: op.operationType as 'add' | 'subtract' | 'multiply' | 'divide',
             right_operand: Number(op.rightOperand),
