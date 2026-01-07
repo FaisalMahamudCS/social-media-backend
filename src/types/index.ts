@@ -30,7 +30,7 @@ export interface OperationNode {
   value: number;
   operation_type?: 'add' | 'subtract' | 'multiply' | 'divide';
   right_operand?: number;
-  created_at: Date;
+  created_at: string;
   children: OperationNode[];
 }
 
